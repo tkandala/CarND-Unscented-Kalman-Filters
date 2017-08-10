@@ -21,7 +21,7 @@ UKF::UKF() {
   x_ = VectorXd(5);
 
   // initial covariance matrix
-  P_ = MatrixXd(5, 5);
+  P_ = MatrixXd.Identity(5, 5);
 
   // Process noise standard deviation longitudinal acceleration in m/s^2
   std_a_ = 30;
@@ -51,6 +51,27 @@ UKF::UKF() {
 
   Hint: one or more values initialized above might be wildly off...
   */
+
+  is_initialized_ = false;
+
+  //set state dimension
+  n_x_ = 5;
+
+  //set augmented dimension
+  n_aug_ = 7;
+
+  //spreading parameter
+  lambda_ = 3 - n_aug_;
+
+  // initial sigma points matrix
+  Xsig_pred_ = MatrixXd(n_aug_, 2*n_aug_ + 1);
+
+  //set weights
+  weights_ = VectorXd(2*n_aug_+1);
+
+  //time
+  time_us_ = 0;
+
 }
 
 UKF::~UKF() {}
@@ -66,6 +87,49 @@ void UKF::ProcessMeasurement(MeasurementPackage meas_package) {
   Complete this function! Make sure you switch between lidar and radar
   measurements.
   */
+
+  /*****************************************************************************
+   *  Initialization
+   ****************************************************************************/
+  if (!is_initialized_) {
+
+    if (meas_package.sensor_type_ == MeasurementPackage::RADAR) {
+      /**
+      Convert radar from polar to cartesian coordinates and initialize state.
+      */
+
+      //cout << "Radar measurement" << endl;
+
+      float rho = meas_package.raw_measurements_[0];
+      float theta = meas_package.raw_measurements_[1] * 180/M_PI;
+      float rho_dot = meas_package.raw_measurements_[2];
+
+      float px = rho * cos(theta);
+      float py = rho * sin(theta);
+      float v = 4.3; //Typical speed of a bicycle (according to google) is 15.5km/hr ot 4.3m/s
+      float si = 0;
+      float si_dot = 0;
+
+      x_ << px, py, v, si, si_dot;
+
+    }
+    else if (meas_package.sensor_type_ == MeasurementPackage::LASER) {
+      /**
+      Initialize state.
+      */
+
+      //cout << "Lidar measurement" << endl;
+
+      x_ << meas_package.raw_measurements_[0], meas_package.raw_measurements_[1], 4.3, 0, 0;
+    }
+
+    time_us_ = meas_package.timestamp_;
+
+    // done initializing, no need to predict or update
+    is_initialized_ = true;
+    return;
+  }
+
 }
 
 /**
