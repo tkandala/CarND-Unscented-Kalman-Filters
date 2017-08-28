@@ -24,10 +24,10 @@ UKF::UKF() {
   P_ = MatrixXd::Identity(5, 5);
 
   // Process noise standard deviation longitudinal acceleration in m/s^2
-  std_a_ = 5;
+  std_a_ = 4;
 
   // Process noise standard deviation yaw acceleration in rad/s^2
-  std_yawdd_ = 5;
+  std_yawdd_ = 6;
 
   // Laser measurement noise standard deviation position1 in m
   std_laspx_ = 0.15;
@@ -106,7 +106,7 @@ void UKF::ProcessMeasurement(MeasurementPackage meas_package) {
 
       float px = rho * cos(theta);
       float py = rho * sin(theta);
-      float v = 4.3; //Typical speed of a bicycle (according to google) is 15.5km/hr ot 4.3m/s
+      float v = 4.3; //Typical speed of a bicycle (according to google) is 15.5km/hr or 4.3m/s
       float si = 0;
       float si_dot = 0;
 
