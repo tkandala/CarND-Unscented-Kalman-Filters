@@ -21,13 +21,13 @@ UKF::UKF() {
   x_ = VectorXd(5);
 
   // initial covariance matrix
-  P_ = MatrixXd.Identity(5, 5);
+  P_ = MatrixXd::Identity(5, 5);
 
   // Process noise standard deviation longitudinal acceleration in m/s^2
-  std_a_ = 30;
+  std_a_ = 5;
 
   // Process noise standard deviation yaw acceleration in rad/s^2
-  std_yawdd_ = 30;
+  std_yawdd_ = 5;
 
   // Laser measurement noise standard deviation position1 in m
   std_laspx_ = 0.15;
@@ -64,7 +64,7 @@ UKF::UKF() {
   lambda_ = 3 - n_aug_;
 
   // initial sigma points matrix
-  Xsig_pred_ = MatrixXd(n_aug_, 2*n_aug_ + 1);
+  Xsig_pred_ = MatrixXd(n_x_, 2*n_aug_ + 1);
 
   //set weights
   weights_ = VectorXd(2*n_aug_+1);
@@ -164,6 +164,8 @@ void UKF::Prediction(double delta_t) {
   vector, x_. Predict sigma points, the state, and the state covariance matrix.
   */
 
+  //cout << "Prediction Step" << endl;
+
   //create augmented mean vector
   VectorXd x_aug = VectorXd(7);
 
@@ -172,6 +174,8 @@ void UKF::Prediction(double delta_t) {
 
   //create sigma point matrix
   MatrixXd Xsig_aug = MatrixXd(n_aug_, 2 * n_aug_ + 1);
+
+  //cout << "Step1" << endl;
 
   //create augmented mean state
   x_aug.head(5) = x_;
@@ -194,6 +198,8 @@ void UKF::Prediction(double delta_t) {
     Xsig_aug.col(i+1)       = x_aug + sqrt(lambda_+n_aug_) * L.col(i);
     Xsig_aug.col(i+1+n_aug_) = x_aug - sqrt(lambda_+n_aug_) * L.col(i);
   }
+
+  //cout << "Step2" << endl;
 
   //predict sigma points
   for (int i = 0; i< 2*n_aug_+1; i++)
@@ -224,6 +230,8 @@ void UKF::Prediction(double delta_t) {
     double yaw_p = yaw + yawd*delta_t;
     double yawd_p = yawd;
 
+    //cout << "Step3" << endl;
+
     //add noise
     px_p = px_p + 0.5*nu_a*delta_t*delta_t * cos(yaw);
     py_p = py_p + 0.5*nu_a*delta_t*delta_t * sin(yaw);
@@ -240,6 +248,8 @@ void UKF::Prediction(double delta_t) {
     Xsig_pred_(4,i) = yawd_p;
   }
 
+  //cout << "Step4" << endl;
+
   // set weights
   double weight_0 = lambda_/(lambda_+n_aug_);
   weights_(0) = weight_0;
@@ -248,11 +258,16 @@ void UKF::Prediction(double delta_t) {
     weights_(i) = weight;
   }
 
+  //cout << "Step5" << endl;
+
   //predicted state mean
   x_.fill(0.0);
   for (int i = 0; i < 2 * n_aug_ + 1; i++) {  //iterate over sigma points
+    //cout << "i: " << i << endl;
     x_ = x_+ weights_(i) * Xsig_pred_.col(i);
   }
+
+  //cout << "Step6" << endl;
 
   //predicted state covariance matrix
   P_.fill(0.0);
@@ -266,6 +281,8 @@ void UKF::Prediction(double delta_t) {
 
     P_ = P_ + weights_(i) * x_diff * x_diff.transpose();
   }
+
+  //cout << "Prediction complete" << endl;
 
 }
 
@@ -364,7 +381,7 @@ void UKF::UpdateLidar(MeasurementPackage meas_package) {
   VectorXd z_diff = z - z_pred;
 
   //NIS
-
+  NIS_laser_ = z_diff.transpose() * S.inverse() * z_diff;
 
   //angle normalization
   while (z_diff(1)> M_PI) z_diff(1)-=2.*M_PI;
@@ -471,6 +488,11 @@ void UKF::UpdateRadar(MeasurementPackage meas_package) {
 
   //residual
   VectorXd z_diff = z - z_pred;
+
+  //NIS
+  NIS_radar_ = z_diff.transpose() * S.inverse() * z_diff;
+
+  //cout << NIS_radar_ << endl;
 
   //angle normalization
   while (z_diff(1)> M_PI) z_diff(1)-=2.*M_PI;

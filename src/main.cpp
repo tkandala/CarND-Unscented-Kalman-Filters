@@ -4,6 +4,7 @@
 #include <math.h>
 #include "ukf.h"
 #include "tools.h"
+#include <fstream>
 
 using namespace std;
 
@@ -30,6 +31,9 @@ int main()
 {
   uWS::Hub h;
 
+  // Create file to store NIS values
+  ofstream out_file_;
+
   // Create a Kalman Filter instance
   UKF ukf;
 
@@ -38,10 +42,12 @@ int main()
   vector<VectorXd> estimations;
   vector<VectorXd> ground_truth;
 
-  h.onMessage([&ukf,&tools,&estimations,&ground_truth](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length, uWS::OpCode opCode) {
+  h.onMessage([&ukf,&tools,&estimations,&ground_truth,&out_file_](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length, uWS::OpCode opCode) {
     // "42" at the start of the message means there's a websocket message event.
     // The 4 signifies a websocket message
     // The 2 signifies a websocket event
+
+    out_file_.open("NIS.txt");
 
     if (length && length > 2 && data[0] == '4' && data[1] == '2')
     {
@@ -106,7 +112,17 @@ int main()
     	  ground_truth.push_back(gt_values);
           
           //Call ProcessMeasurment(meas_package) for Kalman filter
-    	  ukf.ProcessMeasurement(meas_package);    	  
+    	  ukf.ProcessMeasurement(meas_package);
+
+          // output the NIS values
+
+          if (meas_package.sensor_type_ == MeasurementPackage::LASER) {
+            out_file_ << ukf.NIS_laser_ << "\n";
+            cout << "Laser " << ukf.NIS_laser_ << endl;
+          } else if (meas_package.sensor_type_ == MeasurementPackage::RADAR) {
+            out_file_ << ukf.NIS_radar_ << "\n";
+            cout << "Radar " << ukf.NIS_radar_ << endl;
+          }
 
     	  //Push the current estimated x,y positon from the Kalman filter's state vector
 
@@ -147,6 +163,8 @@ int main()
         ws.send(msg.data(), msg.length(), uWS::OpCode::TEXT);
       }
     }
+
+    out_file_.close();
 
   });
 
