@@ -27,7 +27,7 @@ UKF::UKF() {
   std_a_ = 4;
 
   // Process noise standard deviation yaw acceleration in rad/s^2
-  std_yawdd_ = 6;
+  std_yawdd_ = 5;
 
   // Laser measurement noise standard deviation position1 in m
   std_laspx_ = 0.15;
@@ -106,7 +106,7 @@ void UKF::ProcessMeasurement(MeasurementPackage meas_package) {
 
       float px = rho * cos(theta);
       float py = rho * sin(theta);
-      float v = 4.3; //Typical speed of a bicycle (according to google) is 15.5km/hr or 4.3m/s
+      float v = 10; //Typical speed of a bicycle (according to google) is 15.5km/hr or 4.3m/s
       float si = 0;
       float si_dot = 0;
 
@@ -120,7 +120,7 @@ void UKF::ProcessMeasurement(MeasurementPackage meas_package) {
 
       //cout << "Lidar measurement" << endl;
 
-      x_ << meas_package.raw_measurements_[0], meas_package.raw_measurements_[1], 4.3, 0, 0;
+      x_ << meas_package.raw_measurements_[0], meas_package.raw_measurements_[1], 10, 0, 0;
     }
 
     time_us_ = meas_package.timestamp_;
