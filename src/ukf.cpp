@@ -24,10 +24,10 @@ UKF::UKF() {
   P_ = MatrixXd::Identity(5, 5);
 
   // Process noise standard deviation longitudinal acceleration in m/s^2
-  std_a_ = 4;
+  std_a_ = 0.5;
 
   // Process noise standard deviation yaw acceleration in rad/s^2
-  std_yawdd_ = 5;
+  std_yawdd_ = 0.5;
 
   // Laser measurement noise standard deviation position1 in m
   std_laspx_ = 0.15;
@@ -106,7 +106,7 @@ void UKF::ProcessMeasurement(MeasurementPackage meas_package) {
 
       float px = rho * cos(theta);
       float py = rho * sin(theta);
-      float v = 10; //Typical speed of a bicycle (according to google) is 15.5km/hr or 4.3m/s
+      float v = 0; //Typical speed of a bicycle (according to google) is 15.5km/hr or 4.3m/s
       float si = 0;
       float si_dot = 0;
 
@@ -120,10 +120,12 @@ void UKF::ProcessMeasurement(MeasurementPackage meas_package) {
 
       //cout << "Lidar measurement" << endl;
 
-      x_ << meas_package.raw_measurements_[0], meas_package.raw_measurements_[1], 10, 0, 0;
+      x_ << meas_package.raw_measurements_[0], meas_package.raw_measurements_[1], 0, 0, 0;
     }
 
     time_us_ = meas_package.timestamp_;
+
+    P_ = MatrixXd::Identity(5, 5);
 
     // done initializing, no need to predict or update
     is_initialized_ = true;
@@ -251,12 +253,9 @@ void UKF::Prediction(double delta_t) {
   //cout << "Step4" << endl;
 
   // set weights
-  double weight_0 = lambda_/(lambda_+n_aug_);
-  weights_(0) = weight_0;
-  for (int i=1; i<2*n_aug_+1; i++) {  //2n+1 weights
-    double weight = 0.5/(n_aug_+lambda_);
-    weights_(i) = weight;
-  }
+
+  weights_.fill(0.5 / (lambda_ + n_aug_));
+  weights_(0) = lambda_/(lambda_ + n_aug_);
 
   //cout << "Step5" << endl;
 
@@ -358,15 +357,9 @@ void UKF::UpdateLidar(MeasurementPackage meas_package) {
 
     //residual
     VectorXd z_diff = Zsig.col(i) - z_pred;
-    //angle normalization
-    while (z_diff(1)> M_PI) z_diff(1)-=2.*M_PI;
-    while (z_diff(1)<-M_PI) z_diff(1)+=2.*M_PI;
 
     // state difference
     VectorXd x_diff = Xsig_pred_.col(i) - x_;
-    //angle normalization
-    while (x_diff(3)> M_PI) x_diff(3)-=2.*M_PI;
-    while (x_diff(3)<-M_PI) x_diff(3)+=2.*M_PI;
 
     Tc = Tc + weights_(i) * x_diff * z_diff.transpose();
   }
@@ -382,10 +375,6 @@ void UKF::UpdateLidar(MeasurementPackage meas_package) {
 
   //NIS
   NIS_laser_ = z_diff.transpose() * S.inverse() * z_diff;
-
-  //angle normalization
-  while (z_diff(1)> M_PI) z_diff(1)-=2.*M_PI;
-  while (z_diff(1)<-M_PI) z_diff(1)+=2.*M_PI;
 
   //update state mean and covariance matrix
   x_ = x_ + K * z_diff;
@@ -484,7 +473,7 @@ void UKF::UpdateRadar(MeasurementPackage meas_package) {
   MatrixXd K = Tc * S.inverse();
 
   VectorXd z = VectorXd(n_z);
-  z << meas_package.raw_measurements_[0], meas_package.raw_measurements_[1] * 180/M_PI, meas_package.raw_measurements_[2];
+  z << meas_package.raw_measurements_[0], meas_package.raw_measurements_[1], meas_package.raw_measurements_[2];
 
   //residual
   VectorXd z_diff = z - z_pred;
